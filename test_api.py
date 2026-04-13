@@ -1,7 +1,7 @@
 import json
 from openai import OpenAI
-
-client = OpenAI(api_key="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")
+import os
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 # Load workplace vocabulary
 with open("vocab.json", "r") as f:
