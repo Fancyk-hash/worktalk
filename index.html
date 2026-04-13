@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CUA WorkTalk</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin: 20px 0 5px;
+            color: #00d4aa;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .lang-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .lang-btn {
+            padding: 12px 25px;
+            border: 2px solid #00d4aa;
+            background: transparent;
+            color: white;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .lang-btn.active {
+            background: #00d4aa;
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+
+        .talk-btn {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 4px solid #00d4aa;
+            background: transparent;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 20px 0;
+        }
+
+        .talk-btn.recording {
+            background: #ff4444;
+            border-color: #ff4444;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .status {
+            font-size: 16px;
+            color: #888;
+            margin: 10px 0;
+            min-height: 24px;
+        }
+
+        .result-box {
+            width: 100%;
+            max-width: 400px;
+            background: #16213e;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .result-box.show { display: block; }
+
+        .result-label {
+            font-size: 12px;
+            color: #00d4aa;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .result-text {
+            font-size: 18px;
+            line-height: 1.5;
+        }
+
+        .translated-text {
+            font-size: 22px;
+            color: #00d4aa;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>CUA WorkTalk</h1>
+    <p class="subtitle">Real-time workplace translator</p>
+
+    <div class="lang-selector">
+        <button class="lang-btn active" onclick="setLang('en')" id="btn-en">
+            English → Spanish
+        </button>
+        <button class="lang-btn" onclick="setLang('es')" id="btn-es">
+            Spanish → English
+        </button>
+    </div>
+
+    <button class="talk-btn" id="talkBtn" 
+        onmousedown="startRecording()" 
+        onmouseup="stopRecording()"
+        ontouchstart="startRecording()"
+        ontouchend="stopRecording()">
+        HOLD TO TALK
+    </button>
+
+    <div class="status" id="status">Choose your language and hold the button to speak</div>
+
+    <div class="result-box" id="originalBox">
+        <div class="result-label">You said</div>
+        <div class="result-text" id="originalText"></div>
+    </div>
+
+    <div class="result-box" id="translatedBox">
+        <div class="result-label">Translation</div>
+        <div class="result-text translated-text" id="translatedText"></div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let currentLang = 'en';
+
+        function setLang(lang) {
+            currentLang = lang;
+            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+            document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+        }
+
+        async function startRecording() {
+            audioChunks = [];
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.start();
+
+            document.getElementById('talkBtn').classList.add('recording');
+            document.getElementById('talkBtn').textContent = 'RECORDING...';
+            document.getElementById('status').textContent = 'Listening...';
+        }
+
+        async function stopRecording() {
+            if (!mediaRecorder) return;
+            
+            mediaRecorder.stop();
+            document.getElementById('talkBtn').classList.remove('recording');
+            document.getElementById('talkBtn').textContent = 'HOLD TO TALK';
+            document.getElementById('status').textContent = 'Translating...';
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+                formData.append('lang', currentLang);
+
+                try {
+                    const response = await fetch('/translate', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    document.getElementById('originalText').textContent = data.original;
+                    document.getElementById('translatedText').textContent = data.translated;
+                    document.getElementById('originalBox').classList.add('show');
+                    document.getElementById('translatedBox').classList.add('show');
+                    document.getElementById('status').textContent = 'Playing translation...';
+
+                    // Play the translated audio
+                    const audio = new Audio('/audio');
+                    audio.play();
+                    audio.onended = () => {
+                        document.getElementById('status').textContent = 'Ready to translate again';
+                    };
+
+                } catch (error) {
+                    document.getElementById('status').textContent = 'Error. Try again.';
+                }
+            };
+        }
+    </script>
+
+</body>
+</html>

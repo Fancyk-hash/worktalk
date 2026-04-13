@@ -1,0 +1,35 @@
+{
+  "locations": {
+    "east elevator": "ascensor este",
+    "west elevator": "ascensor oeste",
+    "third floor closet": "armario del tercer piso",
+    "loading dock": "muelle de carga",
+    "supply room": "cuarto de suministros",
+    "break room": "sala de descanso",
+    "Pryzbyla Center": "Pryzbyla Center",
+    "Maloney Hall": "Maloney Hall",
+    "McGivney Hall": "McGivney Hall",
+    "Hannan Hall": "Hannan Hall",
+    "Nursing building": "edificio de enfermería"
+  },
+  "equipment": {
+    "mop bucket": "cubo de fregona",
+    "floor buffer": "pulidora de pisos",
+    "biohazard bag": "bolsa de residuos peligrosos",
+    "wet floor sign": "señal de piso mojado",
+    "vacuum cleaner": "aspiradora",
+    "trash bags": "bolsas de basura",
+    "cleaning cart": "carrito de limpieza",
+    "rubber gloves": "guantes de goma",
+    "spray bottle": "botella de spray"
+  },
+  "phrases": {
+    "be careful": "ten cuidado",
+    "this area is closed": "esta área está cerrada",
+    "need more supplies": "necesitar más suministros",
+    "call supervisor": "llamar al supervisor",
+    "emergency exit": "salida de emergencia",
+    "wet floor": "piso mojado",
+    "out of order": "fuera de servicio"
+  }
+}
