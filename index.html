@@ -18,7 +18,7 @@
         }
         h1 { font-size: 28px; margin: 20px 0 5px; color: #00d4aa; }
         .subtitle { font-size: 14px; color: #888; margin-bottom: 30px; }
-        .lang-selector { display: flex; gap: 15px; margin-bottom: 30px; }
+        .lang-selector { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
         .lang-btn {
             padding: 12px 25px;
             border: 2px solid #00d4aa;
@@ -68,6 +68,20 @@
         .result-label { font-size: 12px; color: #00d4aa; text-transform: uppercase; margin-bottom: 8px; }
         .result-text { font-size: 18px; line-height: 1.5; }
         .translated-text { font-size: 22px; color: #00d4aa; }
+        .play-btn {
+            display: none;
+            margin-top: 15px;
+            padding: 12px 30px;
+            background: #00d4aa;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+        }
+        .play-btn.show { display: block; }
     </style>
 </head>
 <body>
@@ -97,6 +111,9 @@
     <div class="result-box" id="translatedBox">
         <div class="result-label">Translation</div>
         <div class="result-text translated-text" id="translatedText"></div>
+        <button class="play-btn" id="playBtn" onclick="playAudio()">
+            ▶ Tap to Hear Translation
+        </button>
     </div>
 
     <script>
@@ -104,11 +121,26 @@
         let audioChunks = [];
         let currentLang = 'en';
         let isRecording = false;
+        let audioUrl = null;
 
         function setLang(lang) {
             currentLang = lang;
             document.getElementById('btn-en').classList.toggle('active', lang === 'en');
             document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+        }
+
+        function playAudio() {
+            if (audioUrl) {
+                const audio = new Audio(audioUrl);
+                audio.play().then(() => {
+                    document.getElementById('status').textContent = 'Playing translation...';
+                    audio.onended = () => {
+                        document.getElementById('status').textContent = 'Ready — tap to talk again';
+                    };
+                }).catch(err => {
+                    document.getElementById('status').textContent = 'Tap the play button to hear translation';
+                });
+            }
         }
 
         async function toggleRecording() {
@@ -123,8 +155,9 @@
                     document.getElementById('talkBtn').classList.add('recording');
                     document.getElementById('talkBtn').textContent = 'TAP TO STOP';
                     document.getElementById('status').textContent = 'Recording... tap again to translate';
+                    document.getElementById('playBtn').classList.remove('show');
                 } catch (err) {
-                    document.getElementById('status').textContent = 'Please allow microphone access and try again';
+                    document.getElementById('status').textContent = 'Please allow microphone access in Settings and try again';
                 }
             } else {
                 mediaRecorder.stop();
@@ -145,17 +178,21 @@
                             body: formData
                         });
                         const data = await response.json();
+
                         document.getElementById('originalText').textContent = data.original;
                         document.getElementById('translatedText').textContent = data.translated;
                         document.getElementById('originalBox').classList.add('show');
                         document.getElementById('translatedBox').classList.add('show');
-                        document.getElementById('status').textContent = 'Playing translation...';
 
-                        const audio = new Audio('/audio');
-                        audio.play();
-                        audio.onended = () => {
-                            document.getElementById('status').textContent = 'Ready — tap to talk again';
-                        };
+                        audioUrl = '/audio?t=' + Date.now();
+                        document.getElementById('playBtn').classList.add('show');
+                        document.getElementById('status').textContent = 'Done! Tap the button below to hear translation';
+
+                        const audio = new Audio(audioUrl);
+                        audio.play().catch(() => {
+                            document.getElementById('status').textContent = 'Tap the green button to hear the translation';
+                        });
+
                     } catch (error) {
                         document.getElementById('status').textContent = 'Error. Please try again.';
                     }
