@@ -130,10 +130,10 @@
     </div>
 
     <button class="talk-btn" id="talkBtn" 
-        onmousedown="startRecording()" 
-        onmouseup="stopRecording()"
-        ontouchstart="startRecording()"
-        ontouchend="stopRecording()">
+    onmousedown="startRecording()" 
+    onmouseup="stopRecording()"
+    ontouchstart="event.preventDefault(); startRecording();"
+    ontouchend="event.preventDefault(); stopRecording();">
         HOLD TO TALK
     </button>
 
