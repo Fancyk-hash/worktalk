@@ -86,7 +86,7 @@
 </head>
 <body>
     <h1>CUA WorkTalk</h1>
-    <p class="subtitle">Real-time workplace translator</p>
+    <p class="subtitle" id="subtitle">Real-time workplace translator</p>
 
     <div class="lang-selector">
         <button class="lang-btn active" onclick="setLang('en')" id="btn-en">
@@ -104,12 +104,12 @@
     <div class="status" id="status">Choose your language and tap the button to speak</div>
 
     <div class="result-box" id="originalBox">
-        <div class="result-label">You said</div>
+        <div class="result-label" id="youSaidLabel">You said</div>
         <div class="result-text" id="originalText"></div>
     </div>
 
     <div class="result-box" id="translatedBox">
-        <div class="result-label">Translation</div>
+        <div class="result-label" id="translationLabel">Translation</div>
         <div class="result-text translated-text" id="translatedText"></div>
         <button class="play-btn" id="playBtn" onclick="playAudio()">
             ▶ Tap to Hear Translation
@@ -123,27 +123,79 @@
         let isRecording = false;
         let audioUrl = null;
 
+        // All UI text in both languages
+        const ui = {
+            en: {
+                subtitle: "Real-time workplace translator",
+                tapToTalk: "TAP TO TALK",
+                tapToStop: "TAP TO STOP",
+                status: "Choose your language and tap the button to speak",
+                recording: "Recording... tap again to translate",
+                translating: "Translating...",
+                done: "Done! Tap the green button to hear the translation",
+                playing: "Playing translation...",
+                ready: "Ready — tap to talk again",
+                micError: "Please allow microphone access in Settings and try again",
+                error: "Error. Please try again.",
+                youSaid: "YOU SAID",
+                translation: "TRANSLATION",
+                playBtn: "▶ Tap to Hear Translation"
+            },
+            es: {
+                subtitle: "Traductor en tiempo real para el trabajo",
+                tapToTalk: "TOCA PARA HABLAR",
+                tapToStop: "TOCA PARA PARAR",
+                status: "Elige tu idioma y toca el botón para hablar",
+                recording: "Grabando... toca de nuevo para traducir",
+                translating: "Traduciendo...",
+                done: "¡Listo! Toca el botón verde para escuchar",
+                playing: "Reproduciendo traducción...",
+                ready: "Listo — toca para hablar de nuevo",
+                micError: "Por favor permite el micrófono en Configuración e intenta de nuevo",
+                error: "Error. Por favor intenta de nuevo.",
+                youSaid: "DIJISTE",
+                translation: "TRADUCCIÓN",
+                playBtn: "▶ Toca para Escuchar la Traducción"
+            }
+        };
+
         function setLang(lang) {
             currentLang = lang;
             document.getElementById('btn-en').classList.toggle('active', lang === 'en');
             document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+
+            // Update all UI text based on selected language
+            const t = ui[lang];
+            document.getElementById('subtitle').textContent = t.subtitle;
+            document.getElementById('status').textContent = t.status;
+            document.getElementById('youSaidLabel').textContent = t.youSaid;
+            document.getElementById('translationLabel').textContent = t.translation;
+            document.getElementById('playBtn').textContent = t.playBtn;
+
+            // Only update talk button if not currently recording
+            if (!isRecording) {
+                document.getElementById('talkBtn').textContent = t.tapToTalk;
+            }
         }
 
         function playAudio() {
             if (audioUrl) {
+                const t = ui[currentLang];
                 const audio = new Audio(audioUrl);
                 audio.play().then(() => {
-                    document.getElementById('status').textContent = 'Playing translation...';
+                    document.getElementById('status').textContent = t.playing;
                     audio.onended = () => {
-                        document.getElementById('status').textContent = 'Ready — tap to talk again';
+                        document.getElementById('status').textContent = t.ready;
                     };
-                }).catch(err => {
-                    document.getElementById('status').textContent = 'Tap the play button to hear translation';
+                }).catch(() => {
+                    document.getElementById('status').textContent = t.done;
                 });
             }
         }
 
         async function toggleRecording() {
+            const t = ui[currentLang];
+
             if (!isRecording) {
                 try {
                     audioChunks = [];
@@ -152,19 +204,23 @@
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                     mediaRecorder.start();
                     isRecording = true;
+
                     document.getElementById('talkBtn').classList.add('recording');
-                    document.getElementById('talkBtn').textContent = 'TAP TO STOP';
-                    document.getElementById('status').textContent = 'Recording... tap again to translate';
+                    document.getElementById('talkBtn').textContent = t.tapToStop;
+                    document.getElementById('status').textContent = t.recording;
                     document.getElementById('playBtn').classList.remove('show');
+
                 } catch (err) {
-                    document.getElementById('status').textContent = 'Please allow microphone access in Settings and try again';
+                    document.getElementById('status').textContent = t.micError;
                 }
+
             } else {
                 mediaRecorder.stop();
                 isRecording = false;
+
                 document.getElementById('talkBtn').classList.remove('recording');
-                document.getElementById('talkBtn').textContent = 'TAP TO TALK';
-                document.getElementById('status').textContent = 'Translating...';
+                document.getElementById('talkBtn').textContent = t.tapToTalk;
+                document.getElementById('status').textContent = t.translating;
 
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
@@ -186,15 +242,15 @@
 
                         audioUrl = '/audio?t=' + Date.now();
                         document.getElementById('playBtn').classList.add('show');
-                        document.getElementById('status').textContent = 'Done! Tap the button below to hear translation';
+                        document.getElementById('status').textContent = t.done;
 
                         const audio = new Audio(audioUrl);
                         audio.play().catch(() => {
-                            document.getElementById('status').textContent = 'Tap the green button to hear the translation';
+                            document.getElementById('status').textContent = t.done;
                         });
 
                     } catch (error) {
-                        document.getElementById('status').textContent = 'Error. Please try again.';
+                        document.getElementById('status').textContent = t.error;
                     }
                 };
             }
