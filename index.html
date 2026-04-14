@@ -6,7 +6,6 @@
     <title>CUA WorkTalk</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
             font-family: Arial, sans-serif;
             background: #1a1a2e;
@@ -17,25 +16,9 @@
             align-items: center;
             padding: 20px;
         }
-
-        h1 {
-            font-size: 28px;
-            margin: 20px 0 5px;
-            color: #00d4aa;
-        }
-
-        .subtitle {
-            font-size: 14px;
-            color: #888;
-            margin-bottom: 30px;
-        }
-
-        .lang-selector {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
+        h1 { font-size: 28px; margin: 20px 0 5px; color: #00d4aa; }
+        .subtitle { font-size: 14px; color: #888; margin-bottom: 30px; }
+        .lang-selector { display: flex; gap: 15px; margin-bottom: 30px; }
         .lang-btn {
             padding: 12px 25px;
             border: 2px solid #00d4aa;
@@ -46,13 +29,7 @@
             cursor: pointer;
             transition: all 0.3s;
         }
-
-        .lang-btn.active {
-            background: #00d4aa;
-            color: #1a1a2e;
-            font-weight: bold;
-        }
-
+        .lang-btn.active { background: #00d4aa; color: #1a1a2e; font-weight: bold; }
         .talk-btn {
             width: 180px;
             height: 180px;
@@ -64,27 +41,20 @@
             cursor: pointer;
             transition: all 0.3s;
             margin: 20px 0;
+            -webkit-user-select: none;
+            user-select: none;
         }
-
         .talk-btn.recording {
             background: #ff4444;
             border-color: #ff4444;
             animation: pulse 1s infinite;
         }
-
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
         }
-
-        .status {
-            font-size: 16px;
-            color: #888;
-            margin: 10px 0;
-            min-height: 24px;
-        }
-
+        .status { font-size: 16px; color: #888; margin: 10px 0; min-height: 24px; text-align: center; }
         .result-box {
             width: 100%;
             max-width: 400px;
@@ -94,29 +64,13 @@
             margin: 10px 0;
             display: none;
         }
-
         .result-box.show { display: block; }
-
-        .result-label {
-            font-size: 12px;
-            color: #00d4aa;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-
-        .result-text {
-            font-size: 18px;
-            line-height: 1.5;
-        }
-
-        .translated-text {
-            font-size: 22px;
-            color: #00d4aa;
-        }
+        .result-label { font-size: 12px; color: #00d4aa; text-transform: uppercase; margin-bottom: 8px; }
+        .result-text { font-size: 18px; line-height: 1.5; }
+        .translated-text { font-size: 22px; color: #00d4aa; }
     </style>
 </head>
 <body>
-
     <h1>CUA WorkTalk</h1>
     <p class="subtitle">Real-time workplace translator</p>
 
@@ -129,15 +83,11 @@
         </button>
     </div>
 
-    <button class="talk-btn" id="talkBtn" 
-    onmousedown="startRecording()" 
-    onmouseup="stopRecording()"
-    ontouchstart="event.preventDefault(); startRecording();"
-    ontouchend="event.preventDefault(); stopRecording();">
-        HOLD TO TALK
+    <button class="talk-btn" id="talkBtn" onclick="toggleRecording()">
+        TAP TO TALK
     </button>
 
-    <div class="status" id="status">Choose your language and hold the button to speak</div>
+    <div class="status" id="status">Choose your language and tap the button to speak</div>
 
     <div class="result-box" id="originalBox">
         <div class="result-label">You said</div>
@@ -153,6 +103,7 @@
         let mediaRecorder;
         let audioChunks = [];
         let currentLang = 'en';
+        let isRecording = false;
 
         function setLang(lang) {
             currentLang = lang;
@@ -160,59 +111,57 @@
             document.getElementById('btn-es').classList.toggle('active', lang === 'es');
         }
 
-        async function startRecording() {
-            audioChunks = [];
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.start();
-
-            document.getElementById('talkBtn').classList.add('recording');
-            document.getElementById('talkBtn').textContent = 'RECORDING...';
-            document.getElementById('status').textContent = 'Listening...';
-        }
-
-        async function stopRecording() {
-            if (!mediaRecorder) return;
-            
-            mediaRecorder.stop();
-            document.getElementById('talkBtn').classList.remove('recording');
-            document.getElementById('talkBtn').textContent = 'HOLD TO TALK';
-            document.getElementById('status').textContent = 'Translating...';
-
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const formData = new FormData();
-                formData.append('audio', audioBlob, 'recording.webm');
-                formData.append('lang', currentLang);
-
+        async function toggleRecording() {
+            if (!isRecording) {
                 try {
-                    const response = await fetch('/translate', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const data = await response.json();
-
-                    document.getElementById('originalText').textContent = data.original;
-                    document.getElementById('translatedText').textContent = data.translated;
-                    document.getElementById('originalBox').classList.add('show');
-                    document.getElementById('translatedBox').classList.add('show');
-                    document.getElementById('status').textContent = 'Playing translation...';
-
-                    // Play the translated audio
-                    const audio = new Audio('/audio');
-                    audio.play();
-                    audio.onended = () => {
-                        document.getElementById('status').textContent = 'Ready to translate again';
-                    };
-
-                } catch (error) {
-                    document.getElementById('status').textContent = 'Error. Try again.';
+                    audioChunks = [];
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.start();
+                    isRecording = true;
+                    document.getElementById('talkBtn').classList.add('recording');
+                    document.getElementById('talkBtn').textContent = 'TAP TO STOP';
+                    document.getElementById('status').textContent = 'Recording... tap again to translate';
+                } catch (err) {
+                    document.getElementById('status').textContent = 'Please allow microphone access and try again';
                 }
-            };
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById('talkBtn').classList.remove('recording');
+                document.getElementById('talkBtn').textContent = 'TAP TO TALK';
+                document.getElementById('status').textContent = 'Translating...';
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, 'recording.webm');
+                    formData.append('lang', currentLang);
+
+                    try {
+                        const response = await fetch('/translate', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await response.json();
+                        document.getElementById('originalText').textContent = data.original;
+                        document.getElementById('translatedText').textContent = data.translated;
+                        document.getElementById('originalBox').classList.add('show');
+                        document.getElementById('translatedBox').classList.add('show');
+                        document.getElementById('status').textContent = 'Playing translation...';
+
+                        const audio = new Audio('/audio');
+                        audio.play();
+                        audio.onended = () => {
+                            document.getElementById('status').textContent = 'Ready — tap to talk again';
+                        };
+                    } catch (error) {
+                        document.getElementById('status').textContent = 'Error. Please try again.';
+                    }
+                };
+            }
         }
     </script>
-
 </body>
 </html>
