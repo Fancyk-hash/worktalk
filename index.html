@@ -96,7 +96,7 @@
                 youSaid: "YOU SAID", translation: "TRANSLATION",
                 playBtn: "▶ Tap to Hear",
                 waitJoin: "Join a room to start translating",
-                connected: "🟢 Connected! Ready to translate."
+                connected: "🟢 Connected! Both must tap button once first."
             },
             es: {
                 subtitle: "Traductor en tiempo real para el trabajo",
@@ -114,7 +114,7 @@
                 youSaid: "DIJISTE", translation: "TRADUCCIÓN",
                 playBtn: "▶ Toca para Escuchar",
                 waitJoin: "Únete a una sala para comenzar",
-                connected: "🟢 ¡Conectado! Listo para traducir."
+                connected: "🟢 ¡Conectado! Ambos deben tocar el botón primero."
             }
         };
 
@@ -199,7 +199,7 @@
                     playAudioUrl(audioUrl);
 
                 } catch(e) {}
-            }, 2000);
+            }, 1000);
         }
 
         function playAudio() {
