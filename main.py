@@ -83,10 +83,11 @@ async def translate_audio(
     with open(tmp_path, "rb") as audio_file:
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
-            file=audio_file
+            file=audio_file,
+            response_format="text"
         )
 
-    original_text = transcription.text
+    original_text = transcription if isinstance(transcription, str) else transcription.text
     os.unlink(tmp_path)
 
     if lang == "en":
@@ -99,7 +100,8 @@ async def translate_audio(
     tts_response = client.audio.speech.create(
         model="tts-1",
         voice="alloy",
-        input=translated_text
+        input=translated_text,
+        speed=1.0
     )
 
     audio_path = "response.mp3"

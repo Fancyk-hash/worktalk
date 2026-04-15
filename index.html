@@ -222,13 +222,17 @@
             const wsUrl = `${wsProtocol}//${window.location.host}/ws/${code}`;
             socket = new WebSocket(wsUrl);
 
-            socket.onopen = () => {
-                document.getElementById('joinBtn').textContent = '✓';
-                document.getElementById('joinBtn').style.background = '#1D9E75';
-                document.getElementById('talkBtn').classList.remove('disabled');
-                document.getElementById('talkBtn').textContent = t.tapToTalk;
-                document.getElementById('status').textContent = t.status;
-            };
+           socket.onopen = () => {
+    document.getElementById('joinBtn').textContent = '✓';
+    document.getElementById('joinBtn').style.background = '#1D9E75';
+    document.getElementById('talkBtn').classList.remove('disabled');
+    document.getElementById('talkBtn').textContent = t.tapToTalk;
+    document.getElementById('status').textContent = t.status;
+
+    // Unlock audio on iOS by playing a silent sound immediately
+    const silentAudio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    silentAudio.play().catch(() => {});
+};
 
             socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
