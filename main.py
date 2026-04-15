@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import FileResponse
-import json, os, tempfile, time
+import json, os, tempfile, time, shutil
 from openai import OpenAI
 
 app = FastAPI()
@@ -8,8 +8,6 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 with open("vocab.json", "r") as f:
     vocab = json.load(f)
-
-rooms = {}
 
 def get_relevant_vocab(text):
     relevant = {}
@@ -37,6 +35,20 @@ Be natural and concise.{vocab_hint}"""},
         ]
     )
     return response.choices[0].message.content
+
+def get_room_file(room):
+    return f"room_{room}.json"
+
+def save_room(room, data):
+    with open(get_room_file(room), "w") as f:
+        json.dump(data, f)
+
+def load_room(room):
+    path = get_room_file(room)
+    if not os.path.exists(path):
+        return None
+    with open(path, "r") as f:
+        return json.load(f)
 
 @app.get("/")
 async def home():
@@ -76,20 +88,19 @@ async def translate_audio(
         input=translated_text
     )
 
-    # Save global audio
-    tts_response.stream_to_file("response.mp3")
+    audio_path = "response.mp3"
+    tts_response.stream_to_file(audio_path)
 
-    # Save room-specific audio if room provided
     if room:
         room = room.upper()
-        import shutil
-        shutil.copy("response.mp3", f"room_{room}.mp3")
-        rooms[room] = {
+        room_audio = f"room_{room}.mp3"
+        shutil.copy(audio_path, room_audio)
+        save_room(room, {
             "original": original_text,
             "translated": translated_text,
             "timestamp": time.time(),
             "seen": False
-        }
+        })
 
     return {
         "original": original_text,
@@ -103,10 +114,11 @@ async def get_audio():
 
 @app.get("/room/{room_code}/latest")
 async def get_room_latest(room_code: str):
-    room = rooms.get(room_code.upper())
+    room = load_room(room_code.upper())
     if not room or room.get("seen"):
         return {"has_new": False}
     room["seen"] = True
+    save_room(room_code.upper(), room)
     return {
         "has_new": True,
         "original": room["original"],

@@ -15,17 +15,16 @@
         .room-input { flex: 1; padding: 10px 15px; border-radius: 25px; border: 2px solid #00d4aa; background: transparent; color: white; font-size: 18px; letter-spacing: 4px; text-align: center; text-transform: uppercase; }
         .room-input::placeholder { color: #555; letter-spacing: 2px; font-size: 14px; }
         .room-btn { padding: 10px 20px; border-radius: 25px; border: none; background: #00d4aa; color: #1a1a2e; font-size: 14px; font-weight: bold; cursor: pointer; }
-        .room-status { font-size: 12px; color: #888; margin-top: 8px; text-align: center; }
         .lang-selector { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
         .lang-btn { padding: 12px 25px; border: 2px solid #00d4aa; background: transparent; color: white; border-radius: 25px; font-size: 16px; cursor: pointer; transition: all 0.3s; }
         .lang-btn.active { background: #00d4aa; color: #1a1a2e; font-weight: bold; }
         .talk-btn { width: 180px; height: 180px; border-radius: 50%; border: 4px solid #00d4aa; background: transparent; color: white; font-size: 16px; cursor: pointer; transition: all 0.3s; margin: 20px 0; -webkit-user-select: none; user-select: none; }
         .talk-btn.recording { background: #ff4444; border-color: #ff4444; animation: pulse 1s infinite; }
         .talk-btn.disabled { border-color: #444; color: #444; cursor: not-allowed; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
         .silence-bar { width: 180px; height: 6px; background: #333; border-radius: 3px; margin-top: -10px; margin-bottom: 15px; display: none; }
         .silence-fill { height: 100%; background: #00d4aa; border-radius: 3px; transition: width 0.1s; width: 0%; }
-        .status { font-size: 16px; color: #888; margin: 10px 0; min-height: 24px; text-align: center; }
+        .status { font-size: 15px; color: #888; margin: 10px 0; min-height: 24px; text-align: center; padding: 0 10px; }
         .result-box { width: 100%; max-width: 400px; background: #16213e; border-radius: 15px; padding: 20px; margin: 10px 0; display: none; }
         .result-box.show { display: block; }
         .result-label { font-size: 12px; color: #00d4aa; text-transform: uppercase; margin-bottom: 8px; }
@@ -33,6 +32,7 @@
         .translated-text { font-size: 22px; color: #00d4aa; }
         .play-btn { display: none; margin-top: 15px; padding: 12px 30px; background: #00d4aa; color: #1a1a2e; border: none; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; }
         .play-btn.show { display: block; }
+        .room-status { font-size: 12px; color: #888; margin-top: 8px; text-align: center; }
     </style>
 </head>
 <body>
@@ -76,7 +76,7 @@
         let mediaRecorder, audioChunks = [], currentLang = 'en';
         let isRecording = false, audioUrl = null;
         let currentRoom = null, pollInterval = null;
-        let audioContext = null, audioUnlocked = false;
+        let audioCtx = null, audioUnlocked = false;
         const silenceTimeout = 1500;
 
         const ui = {
@@ -84,12 +84,12 @@
                 subtitle: "Real-time workplace translator",
                 joinRoom: "Join a Room", joinBtn: "JOIN",
                 roomHint: "Enter any code to connect with a colleague",
-                tapToTalk: "TAP TO TALK", tapToStop: "LISTENING...",
+                tapToTalk: "TAP TO\nTALK", tapToStop: "LISTENING...",
                 joinFirst: "JOIN ROOM FIRST",
-                status: "Tap and speak — stops automatically",
-                recording: "Listening... stops when you finish",
+                status: "Tap the button and speak — stops automatically",
+                recording: "Listening... stops when you finish speaking",
                 translating: "Translating...",
-                done: "Done! Tap green button to hear",
+                done: "Translation received!",
                 ready: "Ready — tap to talk again",
                 micError: "Please allow microphone access",
                 error: "Error. Please try again.",
@@ -102,12 +102,12 @@
                 subtitle: "Traductor en tiempo real para el trabajo",
                 joinRoom: "Unirse a una Sala", joinBtn: "ENTRAR",
                 roomHint: "Ingresa el código para conectarte",
-                tapToTalk: "TOCA PARA HABLAR", tapToStop: "ESCUCHANDO...",
-                joinFirst: "PRIMERO ÚNETE A UNA SALA",
-                status: "Toca y habla — para automáticamente",
-                recording: "Escuchando... para automáticamente",
+                tapToTalk: "TOCA PARA\nHABLAR", tapToStop: "ESCUCHANDO...",
+                joinFirst: "ÚNETE A UNA SALA",
+                status: "Toca el botón y habla — para automáticamente",
+                recording: "Escuchando... para al terminar de hablar",
                 translating: "Traduciendo...",
-                done: "¡Listo! Toca el botón verde para escuchar",
+                done: "¡Traducción recibida!",
                 ready: "Listo — toca para hablar de nuevo",
                 micError: "Por favor permite el micrófono",
                 error: "Error. Por favor intenta de nuevo.",
@@ -118,18 +118,33 @@
             }
         };
 
+        // Unlock audio — call on ANY user interaction
         function unlockAudio() {
             if (audioUnlocked) return;
-            const ctx = new AudioContext();
-            const buf = ctx.createBuffer(1, 1, 22050);
-            const src = ctx.createBufferSource();
-            src.buffer = buf;
-            src.connect(ctx.destination);
-            src.start(0);
-            audioUnlocked = true;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const buf = audioCtx.createBuffer(1, 1, 22050);
+                const src = audioCtx.createBufferSource();
+                src.buffer = buf;
+                src.connect(audioCtx.destination);
+                src.start(0);
+                audioUnlocked = true;
+            } catch(e) {}
+        }
+
+        async function playAudioUrl(url) {
+            unlockAudio();
+            try {
+                const audio = new Audio(url);
+                await audio.play();
+                return audio;
+            } catch(e) {
+                document.getElementById('playBtn').classList.add('show');
+            }
         }
 
         function setLang(lang) {
+            unlockAudio();
             currentLang = lang;
             document.getElementById('btn-en').classList.toggle('active', lang === 'en');
             document.getElementById('btn-es').classList.toggle('active', lang === 'es');
@@ -150,13 +165,11 @@
         }
 
         function joinRoom() {
+            unlockAudio();
             const code = document.getElementById('roomInput').value.trim().toUpperCase();
             if (code.length < 2) { alert('Please enter a room code!'); return; }
             currentRoom = code;
             const t = ui[currentLang];
-
-            // Unlock audio on iOS — must happen on user tap
-            unlockAudio();
 
             document.getElementById('joinBtn').textContent = '✓';
             document.getElementById('joinBtn').style.background = '#1D9E75';
@@ -165,7 +178,7 @@
             document.getElementById('status').textContent = t.status;
             document.getElementById('roomStatus').textContent = t.connected;
 
-            // Poll for translations from the other person
+            // Poll every 2 seconds for new translations
             if (pollInterval) clearInterval(pollInterval);
             pollInterval = setInterval(async () => {
                 if (isRecording) return;
@@ -179,35 +192,32 @@
                     document.getElementById('translatedText').textContent = data.translated;
                     document.getElementById('originalBox').classList.add('show');
                     document.getElementById('translatedBox').classList.add('show');
+                    document.getElementById('status').textContent = ui[currentLang].done;
 
                     audioUrl = `/room/${currentRoom}/audio?t=` + Date.now();
                     document.getElementById('playBtn').classList.add('show');
-                    document.getElementById('status').textContent = ui[currentLang].done;
-
-                    // Play automatically — unlocked by the JOIN button tap
-                    const audio = new Audio(audioUrl);
-                    audio.play().catch(() => {
-                        document.getElementById('status').textContent = ui[currentLang].done;
-                    });
+                    playAudioUrl(audioUrl);
 
                 } catch(e) {}
             }, 2000);
         }
 
         function playAudio() {
-            if (audioUrl) new Audio(audioUrl).play().catch(() => {});
+            unlockAudio();
+            if (audioUrl) playAudioUrl(audioUrl);
         }
 
         async function toggleRecording() {
             if (!currentRoom) return;
+            unlockAudio();
             const t = ui[currentLang];
             if (!isRecording) {
                 try {
                     audioChunks = [];
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    audioContext = new AudioContext();
-                    const source = audioContext.createMediaStreamSource(stream);
-                    const analyser = audioContext.createAnalyser();
+                    const ac = new (window.AudioContext || window.webkitAudioContext)();
+                    const source = ac.createMediaStreamSource(stream);
+                    const analyser = ac.createAnalyser();
                     analyser.fftSize = 512;
                     source.connect(analyser);
                     const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -227,12 +237,12 @@
                     function checkSilence() {
                         if (!isRecording) return;
                         analyser.getByteFrequencyData(dataArray);
-                        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+                        const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
                         if (avg < 8) {
                             if (!silenceStart) silenceStart = Date.now();
-                            const pct = Math.min(100, ((Date.now() - silenceStart) / silenceTimeout) * 100);
-                            document.getElementById('silenceFill').style.width = pct + '%';
-                            if (Date.now() - silenceStart >= silenceTimeout) { stopRecording(); return; }
+                            const pct = Math.min(100, ((Date.now()-silenceStart)/silenceTimeout)*100);
+                            document.getElementById('silenceFill').style.width = pct+'%';
+                            if (Date.now()-silenceStart >= silenceTimeout) { stopRecording(); return; }
                         } else {
                             silenceStart = null;
                             document.getElementById('silenceFill').style.width = '0%';
@@ -240,7 +250,7 @@
                         requestAnimationFrame(checkSilence);
                     }
                     checkSilence();
-                } catch (err) {
+                } catch(err) {
                     document.getElementById('status').textContent = t.micError;
                 }
             } else {
@@ -253,7 +263,6 @@
             const t = ui[currentLang];
             isRecording = false;
             mediaRecorder.stop();
-            if (audioContext) { audioContext.close(); audioContext = null; }
             document.getElementById('talkBtn').classList.remove('recording');
             document.getElementById('talkBtn').textContent = t.tapToTalk;
             document.getElementById('status').textContent = t.translating;
@@ -277,8 +286,8 @@
                     audioUrl = '/audio?t=' + Date.now();
                     document.getElementById('playBtn').classList.add('show');
                     document.getElementById('status').textContent = t.ready;
-                    new Audio(audioUrl).play().catch(() => {});
-                } catch (error) {
+                    playAudioUrl(audioUrl);
+                } catch(error) {
                     document.getElementById('status').textContent = t.error;
                 }
             };
