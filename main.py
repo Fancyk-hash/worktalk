@@ -1,6 +1,6 @@
-from fastapi import FastAPI, File, UploadFile, Form, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import FileResponse
-import json, os, tempfile, time, asyncio
+import json, os, tempfile, time
 from openai import OpenAI
 
 app = FastAPI()
@@ -9,9 +9,7 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 with open("vocab.json", "r") as f:
     vocab = json.load(f)
 
-# Room storage — room_code -> list of connected websockets
 rooms = {}
-room_data = {}
 
 def get_relevant_vocab(text):
     relevant = {}
@@ -44,31 +42,6 @@ Be natural and concise.{vocab_hint}"""},
 async def home():
     return FileResponse("index.html")
 
-@app.websocket("/ws/{room_code}")
-async def websocket_endpoint(websocket: WebSocket, room_code: str):
-    await websocket.accept()
-    room_code = room_code.upper()
-    if room_code not in rooms:
-        rooms[room_code] = []
-    rooms[room_code].append(websocket)
-    count = len(rooms[room_code])
-    await websocket.send_json({"type": "joined", "count": count})
-    for ws in rooms[room_code]:
-        try:
-            await ws.send_json({"type": "count", "count": count})
-        except:
-            pass
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        rooms[room_code].remove(websocket)
-        for ws in rooms[room_code]:
-            try:
-                await ws.send_json({"type": "count", "count": len(rooms[room_code])})
-            except:
-                pass
-
 @app.post("/translate")
 async def translate_audio(
     audio: UploadFile = File(...),
@@ -100,27 +73,23 @@ async def translate_audio(
     tts_response = client.audio.speech.create(
         model="tts-1",
         voice="alloy",
-        input=translated_text,
-        speed=1.0
+        input=translated_text
     )
 
-    audio_path = "response.mp3"
-    tts_response.stream_to_file(audio_path)
+    # Save global audio
+    tts_response.stream_to_file("response.mp3")
 
-    # Notify all OTHER devices in the room via WebSocket
+    # Save room-specific audio if room provided
     if room:
         room = room.upper()
-        if room in rooms:
-            for ws in rooms[room]:
-                try:
-                    await ws.send_json({
-                        "type": "translation",
-                        "original": original_text,
-                        "translated": translated_text,
-                        "audio_url": "/audio?t=" + str(time.time())
-                    })
-                except:
-                    pass
+        import shutil
+        shutil.copy("response.mp3", f"room_{room}.mp3")
+        rooms[room] = {
+            "original": original_text,
+            "translated": translated_text,
+            "timestamp": time.time(),
+            "seen": False
+        }
 
     return {
         "original": original_text,
@@ -130,4 +99,23 @@ async def translate_audio(
 
 @app.get("/audio")
 async def get_audio():
+    return FileResponse("response.mp3", media_type="audio/mpeg")
+
+@app.get("/room/{room_code}/latest")
+async def get_room_latest(room_code: str):
+    room = rooms.get(room_code.upper())
+    if not room or room.get("seen"):
+        return {"has_new": False}
+    room["seen"] = True
+    return {
+        "has_new": True,
+        "original": room["original"],
+        "translated": room["translated"]
+    }
+
+@app.get("/room/{room_code}/audio")
+async def get_room_audio(room_code: str):
+    path = f"room_{room_code.upper()}.mp3"
+    if os.path.exists(path):
+        return FileResponse(path, media_type="audio/mpeg")
     return FileResponse("response.mp3", media_type="audio/mpeg")

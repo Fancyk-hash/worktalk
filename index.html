@@ -6,86 +6,23 @@
     <title>CUA WorkTalk</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            background: #1a1a2e;
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
+        body { font-family: Arial, sans-serif; background: #1a1a2e; color: white; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         h1 { font-size: 28px; margin: 20px 0 5px; color: #00d4aa; }
         .subtitle { font-size: 14px; color: #888; margin-bottom: 20px; text-align: center; }
-        .room-box {
-            width: 100%;
-            max-width: 400px;
-            background: #16213e;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
+        .room-box { width: 100%; max-width: 400px; background: #16213e; border-radius: 15px; padding: 20px; margin-bottom: 20px; }
         .room-label { font-size: 12px; color: #00d4aa; text-transform: uppercase; margin-bottom: 10px; }
         .room-input-row { display: flex; gap: 10px; }
-        .room-input {
-            flex: 1;
-            padding: 10px 15px;
-            border-radius: 25px;
-            border: 2px solid #00d4aa;
-            background: transparent;
-            color: white;
-            font-size: 18px;
-            letter-spacing: 4px;
-            text-align: center;
-            text-transform: uppercase;
-        }
+        .room-input { flex: 1; padding: 10px 15px; border-radius: 25px; border: 2px solid #00d4aa; background: transparent; color: white; font-size: 18px; letter-spacing: 4px; text-align: center; text-transform: uppercase; }
         .room-input::placeholder { color: #555; letter-spacing: 2px; font-size: 14px; }
-        .room-btn {
-            padding: 10px 20px;
-            border-radius: 25px;
-            border: none;
-            background: #00d4aa;
-            color: #1a1a2e;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-        }
+        .room-btn { padding: 10px 20px; border-radius: 25px; border: none; background: #00d4aa; color: #1a1a2e; font-size: 14px; font-weight: bold; cursor: pointer; }
         .room-status { font-size: 12px; color: #888; margin-top: 8px; text-align: center; }
-        .connected { color: #00d4aa; }
         .lang-selector { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
-        .lang-btn {
-            padding: 12px 25px;
-            border: 2px solid #00d4aa;
-            background: transparent;
-            color: white;
-            border-radius: 25px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
+        .lang-btn { padding: 12px 25px; border: 2px solid #00d4aa; background: transparent; color: white; border-radius: 25px; font-size: 16px; cursor: pointer; transition: all 0.3s; }
         .lang-btn.active { background: #00d4aa; color: #1a1a2e; font-weight: bold; }
-        .talk-btn {
-            width: 180px;
-            height: 180px;
-            border-radius: 50%;
-            border: 4px solid #00d4aa;
-            background: transparent;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 20px 0;
-            -webkit-user-select: none;
-            user-select: none;
-        }
+        .talk-btn { width: 180px; height: 180px; border-radius: 50%; border: 4px solid #00d4aa; background: transparent; color: white; font-size: 16px; cursor: pointer; transition: all 0.3s; margin: 20px 0; -webkit-user-select: none; user-select: none; }
         .talk-btn.recording { background: #ff4444; border-color: #ff4444; animation: pulse 1s infinite; }
         .talk-btn.disabled { border-color: #444; color: #444; cursor: not-allowed; }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         .silence-bar { width: 180px; height: 6px; background: #333; border-radius: 3px; margin-top: -10px; margin-bottom: 15px; display: none; }
         .silence-fill { height: 100%; background: #00d4aa; border-radius: 3px; transition: width 0.1s; width: 0%; }
         .status { font-size: 16px; color: #888; margin: 10px 0; min-height: 24px; text-align: center; }
@@ -105,7 +42,7 @@
     <div class="room-box">
         <div class="room-label" id="roomLabel">Join a Room</div>
         <div class="room-input-row">
-            <input class="room-input" id="roomInput" maxlength="6" placeholder="ROOM CODE" />
+            <input class="room-input" id="roomInput" maxlength="6" placeholder="ROOM CODE"/>
             <button class="room-btn" onclick="joinRoom()" id="joinBtn">JOIN</button>
         </div>
         <div class="room-status" id="roomStatus">Enter any code to connect with a colleague</div>
@@ -132,64 +69,65 @@
     <div class="result-box" id="translatedBox">
         <div class="result-label" id="translationLabel">TRANSLATION</div>
         <div class="result-text translated-text" id="translatedText"></div>
-        <button class="play-btn" id="playBtn" onclick="playAudio()">▶ Tap to Hear Translation</button>
+        <button class="play-btn" id="playBtn" onclick="playAudio()">▶ Tap to Hear</button>
     </div>
 
     <script>
         let mediaRecorder, audioChunks = [], currentLang = 'en';
         let isRecording = false, audioUrl = null;
-        let currentRoom = null, socket = null;
-        let audioContext = null;
+        let currentRoom = null, pollInterval = null;
+        let audioContext = null, audioUnlocked = false;
         const silenceTimeout = 1500;
 
         const ui = {
             en: {
                 subtitle: "Real-time workplace translator",
-                joinRoom: "Join a Room",
-                joinBtn: "JOIN",
+                joinRoom: "Join a Room", joinBtn: "JOIN",
                 roomHint: "Enter any code to connect with a colleague",
-                tapToTalk: "TAP TO TALK",
-                tapToStop: "LISTENING...",
+                tapToTalk: "TAP TO TALK", tapToStop: "LISTENING...",
                 joinFirst: "JOIN ROOM FIRST",
-                status: "Tap and speak — auto-stops when you finish",
-                recording: "Listening... stops automatically",
+                status: "Tap and speak — stops automatically",
+                recording: "Listening... stops when you finish",
                 translating: "Translating...",
                 done: "Done! Tap green button to hear",
-                playing: "Playing...",
                 ready: "Ready — tap to talk again",
                 micError: "Please allow microphone access",
                 error: "Error. Please try again.",
-                youSaid: "YOU SAID",
-                translation: "TRANSLATION",
-                playBtn: "▶ Tap to Hear Translation",
+                youSaid: "YOU SAID", translation: "TRANSLATION",
+                playBtn: "▶ Tap to Hear",
                 waitJoin: "Join a room to start translating",
-                connected1: "Connected! Waiting for colleague...",
-                connected2: "Both connected! Ready to translate."
+                connected: "🟢 Connected! Ready to translate."
             },
             es: {
                 subtitle: "Traductor en tiempo real para el trabajo",
-                joinRoom: "Unirse a una Sala",
-                joinBtn: "ENTRAR",
+                joinRoom: "Unirse a una Sala", joinBtn: "ENTRAR",
                 roomHint: "Ingresa el código para conectarte",
-                tapToTalk: "TOCA PARA HABLAR",
-                tapToStop: "ESCUCHANDO...",
+                tapToTalk: "TOCA PARA HABLAR", tapToStop: "ESCUCHANDO...",
                 joinFirst: "PRIMERO ÚNETE A UNA SALA",
                 status: "Toca y habla — para automáticamente",
                 recording: "Escuchando... para automáticamente",
                 translating: "Traduciendo...",
                 done: "¡Listo! Toca el botón verde para escuchar",
-                playing: "Reproduciendo...",
                 ready: "Listo — toca para hablar de nuevo",
                 micError: "Por favor permite el micrófono",
                 error: "Error. Por favor intenta de nuevo.",
-                youSaid: "DIJISTE",
-                translation: "TRADUCCIÓN",
+                youSaid: "DIJISTE", translation: "TRADUCCIÓN",
                 playBtn: "▶ Toca para Escuchar",
                 waitJoin: "Únete a una sala para comenzar",
-                connected1: "¡Conectado! Esperando al colega...",
-                connected2: "¡Ambos conectados! Listos para traducir."
+                connected: "🟢 ¡Conectado! Listo para traducir."
             }
         };
+
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            const ctx = new AudioContext();
+            const buf = ctx.createBuffer(1, 1, 22050);
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            src.connect(ctx.destination);
+            src.start(0);
+            audioUnlocked = true;
+        }
 
         function setLang(lang) {
             currentLang = lang;
@@ -198,7 +136,6 @@
             const t = ui[lang];
             document.getElementById('subtitle').textContent = t.subtitle;
             document.getElementById('roomLabel').textContent = t.joinRoom;
-            document.getElementById('joinBtn').textContent = currentRoom ? '✓' : t.joinBtn;
             document.getElementById('youSaidLabel').textContent = t.youSaid;
             document.getElementById('translationLabel').textContent = t.translation;
             document.getElementById('playBtn').textContent = t.playBtn;
@@ -206,6 +143,7 @@
                 document.getElementById('roomStatus').textContent = t.roomHint;
                 document.getElementById('status').textContent = t.waitJoin;
                 document.getElementById('talkBtn').textContent = t.joinFirst;
+                document.getElementById('joinBtn').textContent = t.joinBtn;
             } else if (!isRecording) {
                 document.getElementById('talkBtn').textContent = t.tapToTalk;
             }
@@ -217,57 +155,47 @@
             currentRoom = code;
             const t = ui[currentLang];
 
-            // Connect WebSocket
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${window.location.host}/ws/${code}`;
-            socket = new WebSocket(wsUrl);
+            // Unlock audio on iOS — must happen on user tap
+            unlockAudio();
 
-           socket.onopen = () => {
-    document.getElementById('joinBtn').textContent = '✓';
-    document.getElementById('joinBtn').style.background = '#1D9E75';
-    document.getElementById('talkBtn').classList.remove('disabled');
-    document.getElementById('talkBtn').textContent = t.tapToTalk;
-    document.getElementById('status').textContent = t.status;
+            document.getElementById('joinBtn').textContent = '✓';
+            document.getElementById('joinBtn').style.background = '#1D9E75';
+            document.getElementById('talkBtn').classList.remove('disabled');
+            document.getElementById('talkBtn').textContent = t.tapToTalk;
+            document.getElementById('status').textContent = t.status;
+            document.getElementById('roomStatus').textContent = t.connected;
 
-    // Unlock audio on iOS by playing a silent sound immediately
-    const silentAudio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-    silentAudio.play().catch(() => {});
-};
+            // Poll for translations from the other person
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(async () => {
+                if (isRecording) return;
+                try {
+                    const res = await fetch(`/room/${currentRoom}/latest`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (!data.has_new) return;
 
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'count') {
-                    const t = ui[currentLang];
-                    document.getElementById('roomStatus').textContent =
-                        data.count >= 2 ? '🟢 ' + t.connected2 : '🟡 ' + t.connected1;
-                }
-                if (data.type === 'translation') {
-                    // Someone else translated — show and play on this device
                     document.getElementById('originalText').textContent = data.original;
                     document.getElementById('translatedText').textContent = data.translated;
                     document.getElementById('originalBox').classList.add('show');
                     document.getElementById('translatedBox').classList.add('show');
-                    audioUrl = data.audio_url;
+
+                    audioUrl = `/room/${currentRoom}/audio?t=` + Date.now();
                     document.getElementById('playBtn').classList.add('show');
                     document.getElementById('status').textContent = ui[currentLang].done;
 
-                    // Try autoplay first, show button as fallback
-                    const audio = new Audio(data.audio_url);
+                    // Play automatically — unlocked by the JOIN button tap
+                    const audio = new Audio(audioUrl);
                     audio.play().catch(() => {
                         document.getElementById('status').textContent = ui[currentLang].done;
                     });
-                }
-            };
 
-            socket.onclose = () => {
-                document.getElementById('roomStatus').textContent = 'Disconnected. Refresh to reconnect.';
-            };
+                } catch(e) {}
+            }, 2000);
         }
 
         function playAudio() {
-            if (audioUrl) {
-                new Audio(audioUrl).play().catch(() => {});
-            }
+            if (audioUrl) new Audio(audioUrl).play().catch(() => {});
         }
 
         async function toggleRecording() {
