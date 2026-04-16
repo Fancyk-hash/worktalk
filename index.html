@@ -193,6 +193,8 @@
                     document.getElementById('originalBox').classList.add('show');
                     document.getElementById('translatedBox').classList.add('show');
                     document.getElementById('status').textContent = ui[currentLang].done;
+// Vibrate phone to alert user
+if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 
                     audioUrl = `/room/${currentRoom}/audio?t=` + Date.now();
                     document.getElementById('playBtn').classList.add('show');
@@ -295,3 +297,4 @@
     </script>
 </body>
 </html>
+
