@@ -197,8 +197,11 @@
 if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 
                     audioUrl = `/room/${currentRoom}/audio?t=` + Date.now();
-                    document.getElementById('playBtn').classList.add('show');
-                    playAudioUrl(audioUrl);
+document.getElementById('playBtn').classList.add('show');
+const autoPlay = new Audio(audioUrl);
+autoPlay.play().catch(() => {
+    document.getElementById('status').textContent = ui[currentLang].done;
+});
 
                 } catch(e) {}
             }, 1000);
@@ -286,9 +289,9 @@ if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     document.getElementById('originalBox').classList.add('show');
                     document.getElementById('translatedBox').classList.add('show');
                     audioUrl = '/audio?t=' + Date.now();
-                    document.getElementById('playBtn').classList.add('show');
-                    document.getElementById('status').textContent = t.ready;
-                    playAudioUrl(audioUrl);
+document.getElementById('status').textContent = t.ready;
+// Speaker does NOT hear their own translation
+// Other person hears it via room polling
                 } catch(error) {
                     document.getElementById('status').textContent = t.error;
                 }
