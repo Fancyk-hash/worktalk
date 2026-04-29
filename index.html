@@ -30,7 +30,7 @@
         .result-label { font-size: 12px; color: #00d4aa; text-transform: uppercase; margin-bottom: 8px; }
         .result-text { font-size: 18px; line-height: 1.5; }
         .translated-text { font-size: 22px; color: #00d4aa; }
-        .play-btn { display: none; margin-top: 15px; padding: 18px 30px; background: #ff4444; color: white; border: none; border-radius: 25px; font-size: 20px; font-weight: bold; cursor: pointer; width: 100%; }
+        .play-btn { display: none; margin-top: 15px; padding: 18px 30px; background: #ff4444; color: white; border: none; border-radius: 25px; font-size: 20px; font-weight: bold; cursor: pointer; width: 100%; animation: none; }
         .play-btn.show { display: block; animation: blink 0.8s infinite; }
         @keyframes blink { 0%{background:#ff4444} 50%{background:#00d4aa} 100%{background:#ff4444} }
         .room-status { font-size: 12px; color: #888; margin-top: 8px; text-align: center; }
@@ -70,7 +70,9 @@
     <div class="result-box" id="translatedBox">
         <div class="result-label" id="translationLabel">TRANSLATION</div>
         <div class="result-text translated-text" id="translatedText"></div>
-        <button class="play-btn" id="playBtn" onclick="playAudio()">🔊 TAP TO HEAR</button>
+        <button class="play-btn" id="playBtn" onclick="playAudio()">
+            🔊 TAP TO HEAR
+        </button>
     </div>
 
     <script>
@@ -78,8 +80,7 @@
         let isRecording = false, audioUrl = null;
         let currentRoom = null, pollInterval = null;
         let audioCtx = null, audioUnlocked = false;
-        let isSpeaker = false; // tracks if THIS device just spoke
-        const silenceTimeout = 1200;
+        const silenceTimeout = 1200; // 1.2 seconds of silence to stop
 
         const ui = {
             en: {
@@ -133,6 +134,18 @@
             } catch(e) {}
         }
 
+        async function playAudioUrl(url) {
+            unlockAudio();
+            try {
+                const audio = new Audio(url);
+                await audio.play();
+                document.getElementById('playBtn').classList.remove('show');
+                return audio;
+            } catch(e) {
+                document.getElementById('playBtn').classList.add('show');
+            }
+        }
+
         function setLang(lang) {
             unlockAudio();
             currentLang = lang;
@@ -170,7 +183,7 @@
 
             if (pollInterval) clearInterval(pollInterval);
             pollInterval = setInterval(async () => {
-                if (isRecording || isSpeaker) return;
+                if (isRecording) return;
                 try {
                     const res = await fetch(`/room/${currentRoom}/latest`);
                     if (!res.ok) return;
@@ -183,16 +196,21 @@
                     document.getElementById('translatedBox').classList.add('show');
 
                     audioUrl = `/room/${currentRoom}/audio?t=` + Date.now();
-                    document.getElementById('playBtn').classList.add('show');
-                    document.getElementById('status').textContent = ui[currentLang].done;
 
+                    // Vibrate strongly
                     if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
 
+                    // Try autoplay first
                     const audio = new Audio(audioUrl);
                     audio.play().then(() => {
-                        document.getElementById('playBtn').classList.remove('show');
                         document.getElementById('status').textContent = ui[currentLang].ready;
-                    }).catch(() => {});
+                        document.getElementById('playBtn').classList.remove('show');
+                    }).catch(() => {
+                        // Autoplay blocked — show big flashing button
+                        document.getElementById('playBtn').textContent = ui[currentLang].playBtn;
+                        document.getElementById('playBtn').classList.add('show');
+                        document.getElementById('status').textContent = ui[currentLang].done;
+                    });
 
                 } catch(e) {}
             }, 1000);
@@ -228,7 +246,6 @@
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                     mediaRecorder.start();
                     isRecording = true;
-                    isSpeaker = true;
 
                     document.getElementById('talkBtn').classList.add('recording');
                     document.getElementById('talkBtn').textContent = t.tapToStop;
@@ -241,7 +258,7 @@
                         if (!isRecording) return;
                         analyser.getByteFrequencyData(dataArray);
                         const avg = dataArray.reduce((a,b) => a+b, 0) / dataArray.length;
-                        if (avg < 15) {
+                        if (avg < 15) { // increased threshold for faster detection
                             if (!silenceStart) silenceStart = Date.now();
                             const pct = Math.min(100, ((Date.now()-silenceStart)/silenceTimeout)*100);
                             document.getElementById('silenceFill').style.width = pct+'%';
@@ -282,25 +299,19 @@
                 try {
                     const response = await fetch('/translate', { method: 'POST', body: formData });
                     const data = await response.json();
-
-                    // Show speaker their own text but NO audio
                     document.getElementById('originalText').textContent = data.original;
                     document.getElementById('translatedText').textContent = data.translated;
                     document.getElementById('originalBox').classList.add('show');
                     document.getElementById('translatedBox').classList.add('show');
                     document.getElementById('status').textContent = t.ready;
-                    // NO audio played on speaker device
-
-                    // Reset speaker flag after 3 seconds
-                    setTimeout(() => { isSpeaker = false; }, 3000);
-
+                    // Speaker does NOT hear their own translation
                 } catch(error) {
                     document.getElementById('status').textContent = t.error;
-                    isSpeaker = false;
                 }
             };
         }
     </script>
 </body>
 </html>
+
 
