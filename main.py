@@ -27,7 +27,6 @@ def translate(text, from_lang, to_lang):
             vocab_hint += f"- {eng} = {esp}\n"
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        max_tokens=150
         messages=[
             {"role": "system", "content": f"""You are a workplace translator for CUA facilities department.
 Translate from {from_lang} to {to_lang}.
