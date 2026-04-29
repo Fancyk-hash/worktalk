@@ -27,6 +27,7 @@ def translate(text, from_lang, to_lang):
             vocab_hint += f"- {eng} = {esp}\n"
     response = client.chat.completions.create(
         model="gpt-4o-mini",
+        max_tokens=150
         messages=[
             {"role": "system", "content": f"""You are a workplace translator for CUA facilities department.
 Translate from {from_lang} to {to_lang}.
@@ -131,3 +132,4 @@ async def get_room_audio(room_code: str):
     if os.path.exists(path):
         return FileResponse(path, media_type="audio/mpeg")
     return FileResponse("response.mp3", media_type="audio/mpeg")
+
